@@ -18,17 +18,14 @@
 using namespace cv;
 using namespace std;
 
+//global variables
 string windowName = "Manga";
+Mat img;
 
-int main(int argc, char** argv)
-{
-	if (argv[1] == NULL){
-		printf("Include an image file");
-		return 0;
-	}
-
+//functions
+Mat binarizeImage(Mat img, string imageFile){
 	//image
-	Mat img = imread(argv[1], 1);
+	img = imread(imageFile, 1);
 	Mat img_gray;
 
 	//grayscale
@@ -37,16 +34,16 @@ int main(int argc, char** argv)
 	//otsu's method
 	threshold(img_gray, img, 0, 255, CV_THRESH_OTSU);
 
-	//window
-	namedWindow(windowName, WINDOW_AUTOSIZE);
-	imshow(windowName, img);
+	return img;
+}
 
+void nameAndSaveImage(char ** filenNameAndDestination){
 	//naming and saving result
 	char * nameAndDestination = "";
 	char *next = NULL;
-	if (argv[2] == NULL) {
+	if (filenNameAndDestination[2] == NULL) {
 		char * characterHandler;
-		characterHandler = strtok_s(argv[1], "\\", &next);
+		characterHandler = strtok_s(filenNameAndDestination[1], "\\", &next);
 
 		while (characterHandler != NULL){
 			nameAndDestination = characterHandler;
@@ -60,9 +57,27 @@ int main(int argc, char** argv)
 
 	}
 	else {
-		nameAndDestination = argv[2];
+		nameAndDestination = filenNameAndDestination[2];
 		imwrite(nameAndDestination, img);
 	}
+}
+
+//main function
+int main(int argc, char** argv)
+{
+	if (argv[1] == NULL){
+		printf("Include an image file");
+		return 0;
+	}
+
+	img = binarizeImage(img, argv[1]);
+
+	//window
+	namedWindow(windowName, WINDOW_AUTOSIZE);
+	imshow(windowName, img);
+
+	nameAndSaveImage(argv);
+
 	waitKey(0);
 
 	return 0;
