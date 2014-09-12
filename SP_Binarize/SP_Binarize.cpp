@@ -5,10 +5,11 @@
 *
 * Author: Raquel Abigail Bunag
 * Date Created: July 24, 2014
-* Date Modified: July 25, 2014
+* Date Modified: September 12, 2014
 */
 
 #include "stdafx.h"
+#include "cv.h"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include <stdlib.h>
@@ -19,25 +20,22 @@ using namespace cv;
 using namespace std;
 
 //global variables
-string windowName = "Manga";
 Mat img;
 
 //functions
-Mat binarizeImage(Mat img, string imageFile){
-	//image
-	img = imread(imageFile, 1);
+Mat binarizeImage(Mat inputOutputImage){
 	Mat img_gray;
 
 	//grayscale
-	cvtColor(img, img_gray, CV_BGR2GRAY);
+	cvtColor(inputOutputImage, img_gray, CV_BGR2GRAY);
 
 	//otsu's method
-	threshold(img_gray, img, 0, 255, CV_THRESH_OTSU);
+	threshold(img_gray, inputOutputImage, 0, 255, CV_THRESH_OTSU);
 
-	return img;
+	return inputOutputImage;
 }
 
-void nameAndSaveImage(char ** filenNameAndDestination){
+void nameAndSaveImage(char ** filenNameAndDestination, Mat img, char * prefix){
 	//naming and saving result
 	char * nameAndDestination = "";
 	char *next = NULL;
@@ -50,7 +48,7 @@ void nameAndSaveImage(char ** filenNameAndDestination){
 			characterHandler = strtok_s(NULL, "\\", &next);
 		}
 
-		string binarizeString = "Binarize_";
+		string binarizeString = prefix;
 		string nameAndDestinationString = binarizeString + nameAndDestination;
 
 		imwrite(nameAndDestinationString, img);
@@ -62,6 +60,65 @@ void nameAndSaveImage(char ** filenNameAndDestination){
 	}
 }
 
+
+/**
+Modified version of thresold_callback function from 
+http://docs.opencv.org/doc/tutorials/imgproc/shapedescriptors/bounding_rotated_ellipses/bounding_rotated_ellipses.html
+*/
+Mat fittingEllipse(int, void*, Mat inputImage)
+{
+	Mat threshold_output;
+	vector<vector<Point> > contours;
+	vector<Vec4i> hierarchy;
+
+	// Detect edges using Threshold
+	threshold(inputImage, inputImage, 224, 250, THRESH_BINARY);
+	
+	findContours(inputImage, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+
+	vector<RotatedRect> minEllipse(contours.size());
+
+	for (int i = 0; i < contours.size(); i++)
+	{
+		if (contours[i].size() > 5)
+			minEllipse[i] = fitEllipse(Mat(contours[i]));
+	}
+
+	//Draw ellipse/caption
+	Mat drawing = Mat::zeros(inputImage.size(), CV_8UC3);
+	for (int i = 0; i < contours.size(); i++)
+	{
+		Scalar color = Scalar(255, 255, 255);
+
+		if (minEllipse[i].size.height >= inputImage.cols / 20 && //IJIP-290-libre.pdf
+			minEllipse[i].size.width >= inputImage.rows / 20 && //IJIP-290-libre.pdf
+			minEllipse[i].size.height < inputImage.cols / 2 &&
+			minEllipse[i].size.width < inputImage.rows &&
+				(
+				(minEllipse[i].angle >= 0 && minEllipse[i].angle <= 30) ||
+				(minEllipse[i].angle >= 60 && minEllipse[i].angle <= 120) ||
+				(minEllipse[i].angle >= 150 && minEllipse[i].angle <= 210) ||
+				(minEllipse[i].angle >= 240 && minEllipse[i].angle <= 300) ||
+				(minEllipse[i].angle >= 330 && minEllipse[i].angle <= 360)
+				) )
+				color = Scalar(0, 0, 255);
+			ellipse(drawing, minEllipse[i], color, 2, 8);
+	}
+	return drawing;
+}
+
+Mat CaptionDetection(Mat inputImage){
+	Mat outputImage;
+
+	outputImage = binarizeImage(inputImage);
+	threshold(outputImage, outputImage, 224, 250, 0); //IJIP-290-libre.pdf
+	
+	GaussianBlur(outputImage, outputImage, Size(9, 9), 0, 0);
+	outputImage = fittingEllipse(0, 0, outputImage);
+
+	return outputImage;
+}
+
 //main function
 int main(int argc, char** argv)
 {
@@ -70,13 +127,14 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
-	img = binarizeImage(img, argv[1]);
+	//image
+	img = imread(argv[1], 1);
 
-	//window
-	namedWindow(windowName, WINDOW_AUTOSIZE);
-	imshow(windowName, img);
-
-	nameAndSaveImage(argv);
+	//caption detection
+	img = CaptionDetection(img);
+	
+	//output image
+	nameAndSaveImage(argv, img, "Caption_Detection_");
 
 	waitKey(0);
 
