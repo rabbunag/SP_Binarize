@@ -5,7 +5,7 @@
 *
 * Author: Raquel Abigail Bunag
 * Date Created: July 24, 2014
-* Date Modified: September 12, 2014
+* Date Modified: October 1, 2014
 */
 
 /**
@@ -27,6 +27,10 @@ using namespace std;
 */
 Mat img;
 int imgWidth, imgHeight;
+int dilation_elem = 0;
+int dilation_size = 0;
+int erosion_elem = 0;
+int erosion_size = 0;
 
 /**
 * Functions
@@ -133,7 +137,7 @@ Mat invertImage(Mat img){
 	return img;
 }
 
-Mat CaptionDetection(Mat inputImage, char ** argv){
+Mat CaptionDetection(Mat inputImage){
 	Mat outputImage, binaryImage, captionDetectImage;
 
 	binaryImage = captionDetectImage = binarizeImage(inputImage);
@@ -157,6 +161,101 @@ Mat CaptionDetection(Mat inputImage, char ** argv){
 	return outputImage;
 }
 
+Mat fillExpand(Mat inputImage){
+	cv::Mat image = inputImage;
+
+	cv::Mat image_thresh;
+	cv::threshold(image, image_thresh, 125, 255, cv::THRESH_BINARY);
+
+	// Loop through the border pixels and if they're black, floodFill from there
+	cv::Mat mask;
+	image_thresh.copyTo(mask);
+	for (int i = 0; i < mask.cols; i++) {
+		if (mask.at<char>(0, i) == 255) {
+			cv::floodFill(mask, cv::Point(i, 0), 255, 0, 10, 10);
+		}
+		if (mask.at<char>(mask.rows - 1, i) == 255) {
+			cv::floodFill(mask, cv::Point(i, mask.rows - 1), 255, 0, 10, 10);
+		}
+	}
+	for (int i = 0; i < mask.rows; i++) {
+		if (mask.at<char>(i, 0) == 255) {
+			cv::floodFill(mask, cv::Point(0, i), 255, 0, 10, 10);
+		}
+		if (mask.at<char>(i, mask.cols - 1) == 255) {
+			cv::floodFill(mask, cv::Point(mask.cols - 1, i), 255, 0, 10, 10);
+		}
+	}
+
+
+	// Compare mask with original.
+	cv::Mat newImage;
+	image.copyTo(newImage);
+	for (int row = 0; row < mask.rows; ++row) {
+		for (int col = 0; col < mask.cols; ++col) {
+			if (mask.at<char>(row, col) == 0) {
+				newImage.at<char>(row, col) = 255;
+			}
+		}
+	}
+
+	return newImage;
+}
+
+Mat CharacterExtraction(Mat inputImage){
+	Mat outputImage, binaryImage, cleanImage;
+	vector<KeyPoint> keypoints;
+
+	vector<vector<Point> > contours;
+	vector<Vec4i> hierarchy;
+
+	binaryImage = binarizeImage(inputImage);
+	
+
+	Mat element1 = getStructuringElement(MORPH_RECT, Size(3, 3));
+
+	erode(binaryImage, binaryImage, element1);
+	
+
+	findContours(binaryImage, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+	vector<RotatedRect> minRect(contours.size());
+
+	for (int i = 0; i < contours.size(); i++)
+	{
+		minRect[i] = minAreaRect(Mat(contours[i]));
+	}
+	
+	Mat drawing = Mat::zeros(inputImage.size(), CV_8UC3);
+	for (int i = 0; i < contours.size(); i++)
+	{
+		Scalar color = Scalar(0, 0, 255);
+		drawContours(drawing, contours, i, Scalar(255, 0, 0), 1, 8, vector<Vec4i>(), 0, Point());
+
+
+		if (minRect[i].size.height <= inputImage.cols / 30 && 
+			minRect[i].size.width <= inputImage.rows / 30  ){
+
+			Point2f rect_points[4]; 
+			minRect[i].points(rect_points);
+
+			for (int j = 0; j < 4; j++){
+				line(inputImage, rect_points[j], rect_points[(j + 1) % 4], color, 1, 8);
+			}
+		}
+	}
+
+	/**TODO: same output as the caption detection*/
+
+	//FAST(binaryImage, keypoints, CV_THRESH_OTSU);
+	//drawKeypoints(binaryImage, keypoints, outputImage, Scalar(255, 0, 0));
+
+	//opening
+	/*cleanImage = Erosion(0, 0, binaryImage);
+	cleanImage = Dilation(0, 0, cleanImage);*/
+
+	return inputImage;
+}
+
 //main function
 int main(int argc, char** argv)
 {
@@ -171,10 +270,13 @@ int main(int argc, char** argv)
 	imgHeight = img.cols;
 
 	//caption detection
-	img = CaptionDetection(img, argv);
+	img = CaptionDetection(img);
+
+	//character detection
+	img = CharacterExtraction(img);
 	
 	//output image
-	nameAndSaveImage(argv, img, "Caption_Detection_");
+	nameAndSaveImage(argv, img, "Character_Detection_");
 
 	waitKey(0);
 
