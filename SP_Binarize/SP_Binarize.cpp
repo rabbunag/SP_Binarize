@@ -265,7 +265,7 @@ Mat getLoadImages(){
 
 	Mat loadedImage, originalImage, grayLoadedImage, loadImage;
 	String imageFileName;
-	Mat clusterGraph(700,700,CV_8UC3, Scalar(0,0,0));
+	Mat clusterGraph(1000,1000,CV_8UC3, Scalar(0,0,0));
 	
 
 	int feature1, feature2;
@@ -275,9 +275,10 @@ Mat getLoadImages(){
 
 	for (int i = 0; i < 15; i++){ //number of characters
 
-		r = (rand() *i) % 255;
-		g = (rand() *i) % 255;
-		b = (rand() *i) % 255;
+		r = (rand() *(i + 1)) % 255;
+		g = (rand() *(i + 1)) % 255;
+		b = (rand() *(i + 1)) % 255;
+
 		
 		for (int j = 1; j <= NUMBER_OF_IMAGES_PER_ALPHABET_CHARACTER; j++){
 
@@ -329,24 +330,7 @@ Mat getLoadImages(){
 						mc[k] = Point2f(mu[k].m10 / mu[k].m00, mu[k].m01 / mu[k].m00);		
 				}
 
-				//draw center of mass
-				//circle(originalImage, mc[contours.size()-1], 4, Scalar(0, 0, 255), -1, 8, 0);
-				
-
-				// Draw contours
-				/*for (int k = 0; k < contours.size(); k++)
-				{
-					if (contours[k].size() != originalImage.cols){
-						Scalar color = Scalar(0, 0, 255);
-						//drawContours(originalImage, contours, k, color, 2, 8, hierarchy, 0, Point());
-						circle(originalImage, mc[1], 4, color, -1, 8, 0);
-					}
-				}*/
-
 				Mat gray;
-
-				/*cvtColor(originalImage, gray, CV_RGB2GRAY, 0);
-				threshold(gray, originalImage, 0, 255, CV_THRESH_OTSU);*/
 
 				loadImage = originalImage(boundingBox);
 
@@ -357,7 +341,7 @@ Mat getLoadImages(){
 
 				
 
-				//imwrite("C:\\Users\\Abigail_pc\\Documents\\Github\\SP_Binarize\\Debug\\bounding_box_" + characters[i] + " (" + to_string(j) + ").jpg", loadImage);
+				imwrite("C:\\Users\\Abigail_pc\\Documents\\Github\\SP_Binarize\\Debug\\bounding_box_" + characters[i] + " (" + to_string(j) + ").jpg", loadImage);
 
 				Mat feature1_roi, feature2_roi;
 				Point centerOfMass(mc[contours.size() - 1].x, mc[contours.size() - 1].y);
@@ -372,19 +356,32 @@ Mat getLoadImages(){
 				int height = loadImage.rows;
 				int totalPixels = width*height;
 
-				feature1_roi = loadImage(Rect(0, 0, width, height));
-				int whiteFeature1 = Character_Feature_Extraction(feature1_roi, i);
+				/*feature1_roi = loadImage(Rect(0, 0, width, height));
+				int whiteFeature1 = Character_Feature_Extraction(feature1_roi, i); //nonzero
 				int blackFeature1 = totalPixels - whiteFeature1;
 
-				feature1 = (blackFeature1 * 100/ whiteFeature1 * 10);
+				feature1 = (blackFeature1 * 10 / whiteFeature1 * 10);
 				
-				/*feature2_roi = loadImage(Rect(width / 2, 0, width / 2, height / 2));
+				feature2_roi = loadImage(Rect(0, , width/2, height)); //Rect(startx, starty, width, height)
 				int whiteFeature2 = Character_Feature_Extraction(feature2_roi, i);
 				int blackFeature2 = totalPixels - whiteFeature2;
 
-				feature2 = (blackFeature2 / whiteFeature2 *100) ;*/
+				feature2 = (blackFeature2 * 10 / whiteFeature2 * 10) ;*/
 
 				int horizontal, vertical, roiNumOfPixelsHorizontal, roiNumOfPixelsVertical;
+				horizontal = vertical = 0;
+
+				int x = (width / 2);
+				roiNumOfPixelsHorizontal = 10 * height; // times 10 because of the desired size of the ROI
+				feature1_roi = loadImage(Rect(x, 0, 10, height));
+				feature1 = roiNumOfPixelsHorizontal - Character_Feature_Extraction(feature1_roi, i);
+
+				int y = (height / 2);
+				roiNumOfPixelsVertical = width * 10;
+				feature2_roi = loadImage(Rect(0, y, width, 10));
+				feature2 = roiNumOfPixelsVertical - Character_Feature_Extraction(feature2_roi, i);
+
+				/*int horizontal, vertical, roiNumOfPixelsHorizontal, roiNumOfPixelsVertical;
 				horizontal = vertical = 0;
 				
 				int x = (width / 2);
@@ -420,11 +417,11 @@ Mat getLoadImages(){
 
 				feature2 = (horizontal + vertical) / 10;
 				
-				
+				*/
 				imwrite("C:\\Users\\Abigail_pc\\Documents\\Github\\SP_Binarize\\Debug\\Feature1_" + characters[i] + " (" + to_string(j) + ").jpg", feature1_roi);
 				imwrite("C:\\Users\\Abigail_pc\\Documents\\Github\\SP_Binarize\\Debug\\Feature2_" + characters[i] + " (" + to_string(j) + ").jpg", feature2_roi);
 			
-				myfile << horizontal*10/100 << "\t" << vertical*10/100 << "\n";
+				myfile << characters[i] << "\tr:" << r << "\tg:"<<g << "\tb:"<<b << "\n";
 
 				Point featuresTopPixel, featuresBottomPixel;
 				featuresTopPixel.x = feature1 + 100;
@@ -439,7 +436,10 @@ Mat getLoadImages(){
 			} //if
 			//myfile << imageFileName << "\n";
 		}
+		r = g = b = 0;
 	}
+
+	
 	myfile.close();
 	return clusterGraph;
 }
