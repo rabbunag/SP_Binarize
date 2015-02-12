@@ -238,7 +238,7 @@ int Character_Feature_Extraction(Mat inputImage, int i){
 	//return keypoints.size();
 }
 
-#define NUMBER_OF_IMAGES_PER_ALPHABET_CHARACTER 8
+#define NUMBER_OF_IMAGES_PER_ALPHABET_CHARACTER 9
 #define NUMBER_OF_CHARACTERS 71
 String alphabet[2] = {"hiragana", "katakana"};
 String characters[71] = {
@@ -294,10 +294,10 @@ Mat getLoadImages(){
 
 				//resize
 				resize(loadedImage, loadedImage, Size(150, 150), 0, 0, INTER_LINEAR);
-				
+				resize(loadedImage, originalImage, Size(150, 150), 0, 0, INTER_LINEAR);
 				loadedImage.copyTo(originalImage);
 
-				Mat element1 = getStructuringElement(MORPH_RECT, Size(45,45));
+				Mat element1 = getStructuringElement(MORPH_RECT, Size(30,30));
 				erode(loadedImage, loadedImage, element1);
 
 				cvtColor(loadedImage, grayLoadedImage, CV_RGB2GRAY, 0);
@@ -333,13 +333,6 @@ Mat getLoadImages(){
 				Mat gray;
 
 				loadImage = originalImage(boundingBox);
-
-				
-
-				Mat element2 = getStructuringElement(MORPH_RECT, Size(8, 8));
-				erode(loadImage, loadImage, element2);
-
-				
 
 				imwrite("C:\\Users\\Abigail_pc\\Documents\\Github\\SP_Binarize\\Debug\\bounding_box_" + characters[i] + " (" + to_string(j) + ").jpg", loadImage);
 
@@ -418,8 +411,8 @@ Mat getLoadImages(){
 				feature2 = (horizontal + vertical) / 10;
 				
 				*/
-				imwrite("C:\\Users\\Abigail_pc\\Documents\\Github\\SP_Binarize\\Debug\\Feature1_" + characters[i] + " (" + to_string(j) + ").jpg", feature1_roi);
-				imwrite("C:\\Users\\Abigail_pc\\Documents\\Github\\SP_Binarize\\Debug\\Feature2_" + characters[i] + " (" + to_string(j) + ").jpg", feature2_roi);
+				//imwrite("C:\\Users\\Abigail_pc\\Documents\\Github\\SP_Binarize\\Debug\\Feature1_" + characters[i] + " (" + to_string(j) + ").jpg", feature1_roi);
+				//imwrite("C:\\Users\\Abigail_pc\\Documents\\Github\\SP_Binarize\\Debug\\Feature2_" + characters[i] + " (" + to_string(j) + ").jpg", feature2_roi);
 			
 				myfile << characters[i] << "\tr:" << r << "\tg:"<<g << "\tb:"<<b << "\n";
 
